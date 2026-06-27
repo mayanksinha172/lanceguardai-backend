@@ -9,6 +9,9 @@ class SignupRequest(BaseModel):
     freelance_type: str = ""
     pain_point: str = ""
     current_tool: str = ""
+    utm_source: str = ""
+    utm_medium: str = ""
+    utm_campaign: str = ""
 
 
 class SignupResponse(BaseModel):
@@ -40,6 +43,9 @@ class WaitlistEntry(BaseModel):
     current_tool: Optional[str] = None
     signed_up_at: str
     user_agent: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
 
 
 class WaitlistListResponse(BaseModel):
@@ -55,3 +61,4 @@ class StatsResponse(BaseModel):
     this_week: int
     hero_count: int
     cta_count: int
+    utm_sources: dict = {}

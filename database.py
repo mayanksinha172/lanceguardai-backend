@@ -37,9 +37,17 @@ def init_db():
                     current_tool   TEXT,
                     signed_up_at   TEXT   NOT NULL,
                     ip_hash        TEXT,
-                    user_agent     TEXT
+                    user_agent     TEXT,
+                    utm_source     TEXT,
+                    utm_medium     TEXT,
+                    utm_campaign   TEXT
                 )
             """)
+            # Safe migration for existing tables
+            for col in ("utm_source", "utm_medium", "utm_campaign"):
+                cur.execute(f"""
+                    ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS {col} TEXT
+                """)
 
 
 def _hash_ip(ip: str) -> str:
@@ -55,6 +63,9 @@ def insert_signup(
     current_tool: str,
     ip: str,
     user_agent: str,
+    utm_source: str = "",
+    utm_medium: str = "",
+    utm_campaign: str = "",
 ) -> int | None:
     """Returns the new row id (signup position), or None if email already exists."""
     with get_db() as conn:
@@ -64,8 +75,9 @@ def insert_signup(
                     """
                     INSERT INTO waitlist
                         (email, name, source, freelance_type, pain_point, current_tool,
-                         signed_up_at, ip_hash, user_agent)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                         signed_up_at, ip_hash, user_agent,
+                         utm_source, utm_medium, utm_campaign)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                     """,
                     (
@@ -78,6 +90,9 @@ def insert_signup(
                         datetime.now(timezone.utc).isoformat(),
                         _hash_ip(ip),
                         (user_agent or "")[:500],
+                        utm_source or None,
+                        utm_medium or None,
+                        utm_campaign or None,
                     ),
                 )
                 return cur.fetchone()[0]
@@ -140,10 +155,17 @@ def get_stats() -> dict:
             )
             src = {r[0]: r[1] for r in cur.fetchall()}
 
+            cur.execute(
+                "SELECT COALESCE(utm_source, 'direct') as src, COUNT(*) as cnt "
+                "FROM waitlist GROUP BY src ORDER BY cnt DESC"
+            )
+            utm_sources = {r[0]: r[1] for r in cur.fetchall()}
+
             return {
                 "total": total,
                 "today": today_count,
                 "this_week": week_count,
                 "hero_count": src.get("hero", 0),
                 "cta_count": src.get("cta", 0),
+                "utm_sources": utm_sources,
             }

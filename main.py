@@ -64,7 +64,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
-    print(f"✓ Database ready v5 | CORS origins: {ALLOWED_ORIGINS}")
+    print(f"✓ Database ready v6 (UTM tracking) | CORS origins: {ALLOWED_ORIGINS}")
 
 
 # ── Public ────────────────────────────────────────────────────────────────────
@@ -90,6 +90,9 @@ async def join_waitlist(request: Request, body: SignupRequest):
         current_tool=body.current_tool,
         ip=ip,
         user_agent=ua,
+        utm_source=body.utm_source,
+        utm_medium=body.utm_medium,
+        utm_campaign=body.utm_campaign,
     )
 
     count = get_count()
