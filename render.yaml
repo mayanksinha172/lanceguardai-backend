@@ -3,7 +3,7 @@ services:
     name: freelanceguard-api
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: find . -name "*.pyc" -delete && find . -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null; pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
