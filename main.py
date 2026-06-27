@@ -118,7 +118,12 @@ def admin_login(body: LoginRequest):
 
 @app.get("/api/admin/stats", response_model=StatsResponse)
 def admin_stats(_: str = Depends(require_admin)):
-    return get_stats()
+    try:
+        return get_stats()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/admin/waitlist", response_model=WaitlistListResponse)
