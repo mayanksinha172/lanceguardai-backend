@@ -1,25 +1,17 @@
-import asyncio
 import os
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import threading
+import resend
 
-import aiosmtplib
-
-GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 
 
-async def _send(to_email: str, name: str, position: int) -> None:
-    if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
-        print("Email skipped: GMAIL_ADDRESS or GMAIL_APP_PASSWORD not set")
+def _send(to_email: str, name: str, position: int) -> None:
+    if not RESEND_API_KEY:
+        print("Email skipped: RESEND_API_KEY not set")
         return
 
+    resend.api_key = RESEND_API_KEY
     first = name.split()[0] if name else "there"
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"You're in, {first} — FreelanceGuard AI"
-    msg["From"] = f"FreelanceGuard AI <{GMAIL_ADDRESS}>"
-    msg["To"] = to_email
 
     html = f"""
 <!DOCTYPE html>
@@ -29,21 +21,18 @@ async def _send(to_email: str, name: str, position: int) -> None:
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%">
 
-        <!-- Brand -->
         <tr><td style="padding-bottom:32px">
           <span style="font-size:11px;color:#11ff99;font-weight:600;letter-spacing:0.1em;text-transform:uppercase">
             FreelanceGuard AI
           </span>
         </td></tr>
 
-        <!-- Headline -->
         <tr><td style="padding-bottom:16px">
           <h1 style="margin:0;font-size:30px;font-weight:400;line-height:1.2;color:#fcfdff">
             You're #<span style="color:#11ff99">{position}</span> on the list, {first}.
           </h1>
         </td></tr>
 
-        <!-- Body -->
         <tr><td style="padding-bottom:16px">
           <p style="margin:0;font-size:16px;line-height:1.7;color:rgba(252,253,255,0.65)">
             We got you. When we launch, you'll be among the first to know — and as an early member,
@@ -58,7 +47,6 @@ async def _send(to_email: str, name: str, position: int) -> None:
           </p>
         </td></tr>
 
-        <!-- Divider -->
         <tr><td style="border-top:1px solid rgba(255,255,255,0.08);padding-top:24px">
           <p style="margin:0;font-size:11px;color:#464a4d;line-height:1.6">
             You're receiving this because you joined the FreelanceGuard AI waitlist.<br>
@@ -73,21 +61,18 @@ async def _send(to_email: str, name: str, position: int) -> None:
 </html>
 """
 
-    msg.attach(MIMEText(html, "html"))
-
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname="smtp.gmail.com",
-            port=465,
-            use_tls=True,
-            username=GMAIL_ADDRESS,
-            password=GMAIL_APP_PASSWORD,
-        )
+        resend.Emails.send({
+            "from": "FreelanceGuard AI <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": f"You're in, {first} — FreelanceGuard AI",
+            "html": html,
+        })
         print(f"Welcome email sent to {to_email}")
     except Exception as exc:
         print(f"Email send failed for {to_email}: {exc}")
 
 
 def send_welcome_email(to_email: str, name: str, position: int) -> None:
-    asyncio.create_task(_send(to_email, name, position))
+    thread = threading.Thread(target=_send, args=(to_email, name, position), daemon=True)
+    thread.start()
